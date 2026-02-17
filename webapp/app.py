@@ -94,6 +94,7 @@ MODEL_CONFIGS = {
             2: ["Normal brain tissue structure", "Symmetrical brain regions", "No abnormal masses detected"],
             3: ["Mass in sella turcica region", "Small, well-circumscribed lesion", "Near optic chiasm area"]
         },
+        'normal_classes': [2],  # 'No Tumor' index
         'icon': 'fa-brain',
         'scan_type': 'MRI Scan',
         'accuracy': '95.42%',
@@ -116,6 +117,7 @@ MODEL_CONFIGS = {
             0: ["Clear lung fields bilaterally", "No infiltrates or consolidation", "Normal cardiac silhouette"],
             1: ["Opacity detected in lung region", "Possible consolidation or infiltrate", "Recommend clinical correlation"]
         },
+        'normal_classes': [0],  # 'Normal' index
         'icon': 'fa-lungs',
         'scan_type': 'Chest X-Ray',
         'accuracy': '97.03%',
@@ -156,6 +158,7 @@ MODEL_CONFIGS = {
             6: ["Clear adipocyte morphology", "Normal fat distribution", "No pathological changes"],
             7: ["Minimal tissue content", "Background staining only", "No diagnostic features"]
         },
+        'normal_classes': [5, 6, 7],  # Mucosa, Adipose, Empty
         'icon': 'fa-microscope',
         'scan_type': 'Histopathology',
         'accuracy': '94.56%',
@@ -343,6 +346,17 @@ def predict():
 
         # Generate Grad-CAM heatmap
         heatmap = gradcam.generate_heatmap(image_tensor, class_idx=predicted_class)
+
+        # Attenuate heatmap for normal/healthy predictions
+        # When the model predicts "normal" with high confidence, the raw activations
+        # are small but min-max normalization stretches them to appear red.
+        # Fix: scale heatmap by abnormal probability so normal = cool/blue.
+        normal_classes = config.get('normal_classes', [])
+        if predicted_class in normal_classes:
+            # Scale by (1 - normal_confidence): 100% normal → heatmap×0, 60% normal → heatmap×0.4
+            abnormal_weight = 1.0 - confidence_score
+            heatmap = heatmap * abnormal_weight
+
         overlay = gradcam.overlay_heatmap(original_np, heatmap, alpha=0.4)
 
         # Get uncertainty estimation
