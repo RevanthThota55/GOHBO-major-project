@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedVision AI - Multi-Model Medical Image Classification with Explainable AI">
+    <title>{% block title %}MedVision AI{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles_new.css') }}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('index') }}" class="nav-brand">
+                <div class="brand-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <span class="brand-text">MedVision AI</span>
+            </a>
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="{{ url_for('about') }}" class="nav-link {% if request.endpoint == 'about' %}active{% endif %}">
+                    <i class="fas fa-info-circle"></i> About
+                </a>
+                <a href="https://github.com/" target="_blank" class="nav-link">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>MedVision AI</h4>
+                    <p>
+                        Multi-model medical imaging AI powered by GOHBO-optimized ResNet-18
+                        with Grad-CAM explainability and Monte Carlo Dropout uncertainty quantification.
+                    </p>
+                    <p class="disclaimer">
+                        <strong>Medical Disclaimer:</strong> This tool is for research and educational purposes only.
+                        Not approved for clinical diagnosis. Always consult qualified healthcare professionals.
+                    </p>
+                </div>
+                <div class="footer-section">
+                    <h4>Key Features</h4>
+                    <ul>
+                        <li><i class="fas fa-check"></i> GOHBO Meta-Heuristic Optimization</li>
+                        <li><i class="fas fa-check"></i> Grad-CAM Visual Explanations</li>
+                        <li><i class="fas fa-check"></i> MC Dropout Uncertainty Analysis</li>
+                        <li><i class="fas fa-check"></i> Clinical PDF Reports</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Supported Models</h4>
+                    <ul>
+                        <li><i class="fas fa-brain"></i> Brain Tumor MRI (95.42%)</li>
+                        <li><i class="fas fa-lungs"></i> Chest X-Ray Pneumonia (97.03%)</li>
+                        <li><i class="fas fa-microscope"></i> Colorectal Cancer (94.56%)</li>
+                        <li>Architecture: ResNet-18 | PyTorch</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 MedVision AI | Built with PyTorch, Flask & Advanced Machine Learning</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

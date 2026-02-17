@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}MedVision AI - Medical Image Classification{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1 class="hero-title">
+            Medical Image Classification<br>
+            with <span class="highlight">Explainable AI</span>
+        </h1>
+        <p class="hero-subtitle">
+            Upload a medical scan for instant AI-powered classification with visual explainability,
+            uncertainty quantification, and clinical-grade reporting.
+        </p>
+        <div class="hero-badges">
+            <div class="badge">
+                <i class="fas fa-brain"></i>
+                <span>Brain Tumor (95.42%)</span>
+            </div>
+            <div class="badge">
+                <i class="fas fa-lungs"></i>
+                <span>Chest X-Ray (97.03%)</span>
+            </div>
+            <div class="badge">
+                <i class="fas fa-microscope"></i>
+                <span>Colorectal (94.56%)</span>
+            </div>
+            <div class="badge">
+                <i class="fas fa-eye"></i>
+                <span>Grad-CAM Explainability</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Model Selection Section -->
+    <section class="model-selection-section reveal">
+        <div class="section-heading">
+            <h2>Select Scan Type</h2>
+            <p>Choose the type of medical image you want to analyze</p>
+        </div>
+        <div class="model-selector reveal-stagger" id="modelSelector">
+            {% for model_key, config in available_models.items() %}
+            <div class="model-card" data-model="{{ model_key }}" id="modelCard_{{ model_key }}">
+                <div class="model-card-icon">
+                    <i class="fas {{ config.icon }}"></i>
+                </div>
+                <h3>{{ config.name }}</h3>
+                <p class="model-card-detail">{{ config.scan_type }} | {{ config.num_classes }} classes</p>
+                <div class="model-card-accuracy">{{ config.accuracy }} accuracy</div>
+                <div class="model-card-classes">
+                    {% for cls in config.class_names %}
+                    <span class="class-tag">{{ cls }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Upload Section -->
+    <section class="upload-section" id="uploadSection" style="display: none;">
+        <div class="card upload-card">
+            <h2 id="uploadTitle"><i class="fas fa-cloud-upload-alt"></i> Upload Medical Scan</h2>
+            <p id="uploadSubtitle" class="viz-subtitle"></p>
+
+            <!-- Drag & Drop Zone -->
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <div class="upload-content">
+                    <i class="fas fa-cloud-upload-alt upload-icon" id="uploadIcon"></i>
+                    <p class="upload-text" id="uploadText">Drag & drop your scan here</p>
+                    <p class="upload-subtext">or click to browse files</p>
+                    <span class="upload-formats">JPG | PNG | TIFF</span>
+                </div>
+            </div>
+
+            <!-- Image Preview -->
+            <div class="image-preview" id="imagePreview" style="display: none;">
+                <h3>Selected Image:</h3>
+                <img id="previewImg" src="" alt="Scan Preview">
+                <button class="btn btn-secondary" id="changeImageBtn">
+                    <i class="fas fa-times"></i> Change Image
+                </button>
+            </div>
+
+            <!-- Analyze Button -->
+            <button class="btn btn-primary btn-large" id="analyzeBtn" style="display: none; margin: 2rem auto; width: 100%; max-width: 400px;" disabled>
+                <i class="fas fa-microscope"></i> Analyze with AI
+            </button>
+
+            <!-- Back to model selection -->
+            <button class="btn btn-secondary" id="backToModelsBtn" style="margin: 1rem auto; display: block;">
+                <i class="fas fa-arrow-left"></i> Change Scan Type
+            </button>
+
+            <!-- Loading State -->
+            <div class="loading" id="loadingState" style="display: none;">
+                <div class="spinner"></div>
+                <p id="loadingText">Analyzing scan...</p>
+                <p class="loading-subtext" id="loadingSubtext">Running GOHBO-optimized ResNet-18 model</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="resultsSection" style="display: none;">
+        <div class="results-container">
+            <!-- Model Badge -->
+            <div class="text-center" style="margin-bottom: 2rem;">
+                <span class="model-result-badge" id="modelResultBadge">
+                    <i class="fas fa-brain"></i> Brain Tumor Classification
+                </span>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card result-card">
+                <h2><i class="fas fa-diagnoses"></i> AI Diagnosis</h2>
+                <div class="diagnosis-result">
+                    <div class="diagnosis-label" id="diagnosisLabel">-</div>
+                    <div class="confidence-container">
+                        <div class="confidence-value" id="confidenceValue">-</div>
+                        <div class="confidence-bar-container">
+                            <div class="confidence-bar" id="confidenceBar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="description-box" id="descriptionBox">
+                    <h4><i class="fas fa-info-circle"></i> About This Condition</h4>
+                    <p id="descriptionText">-</p>
+                </div>
+            </div>
+
+            <!-- Visualization Card -->
+            <div class="card visualization-card">
+                <h2><i class="fas fa-fire"></i> AI Visual Explainability</h2>
+                <p class="viz-subtitle">
+                    Grad-CAM heatmaps reveal which regions influenced the AI's decision
+                </p>
+
+                <!-- Heatmap Callout Banner -->
+                <div class="heatmap-callout">
+                    <div class="heatmap-callout-header">
+                        <i class="fas fa-eye"></i>
+                        <h3 id="heatmapTitle">DETECTION HEATMAP</h3>
+                        <i class="fas fa-fire" style="animation: pulse 2s infinite;"></i>
+                    </div>
+                    <p>
+                        The colored overlay on the right shows <strong>exactly where the AI detected key diagnostic features</strong>.
+                        Red/yellow areas indicate high-confidence detection regions.
+                    </p>
+                </div>
+
+                <div class="visualization-container">
+                    <div class="image-box">
+                        <h4 id="originalLabel">Original Scan</h4>
+                        <img id="originalImage" src="" alt="Original Scan">
+                    </div>
+                    <div class="image-box" style="position: relative;">
+                        <div class="heatmap-arrow">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <h4><i class="fas fa-crosshairs"></i> AI Attention Map (Grad-CAM)</h4>
+                        <img id="heatmapImage" src="" alt="Grad-CAM Heatmap">
+                        <div class="heatmap-legend">
+                            <span class="legend-item">
+                                <span class="color-box" style="background: #FF0000;"></span>
+                                High Importance
+                            </span>
+                            <span class="legend-item">
+                                <span class="color-box" style="background: #FFFF00;"></span>
+                                Medium
+                            </span>
+                            <span class="legend-item">
+                                <span class="color-box" style="background: #0000FF;"></span>
+                                Low
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="description-box" style="margin-top: 2rem;">
+                    <h4><i class="fas fa-lightbulb"></i> How to Read the Heatmap</h4>
+                    <p>
+                        <strong>The colored overlay reveals the AI's decision-making process:</strong><br><br>
+                        <span style="color: #FF4444;">Red/Orange zones</span> = High importance regions where the AI detected key diagnostic patterns<br>
+                        <span style="color: #FFDD44;">Yellow zones</span> = Medium importance areas contributing to the diagnosis<br>
+                        <span style="color: #4488FF;">Blue zones</span> = Low importance regions with minimal influence<br><br>
+                        This Grad-CAM visualization makes the AI's reasoning transparent and verifiable by medical professionals.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Probabilities Card -->
+            <div class="card probabilities-card">
+                <h2><i class="fas fa-chart-bar"></i> Classification Probabilities</h2>
+                <div class="probabilities-container" id="probabilitiesContainer">
+                </div>
+            </div>
+
+            <!-- Explanation Card -->
+            <div class="card explanation-card">
+                <h2><i class="fas fa-stethoscope"></i> AI Reasoning & Analysis</h2>
+                <div class="explanation-content" id="explanationContent">
+                    <div class="explanation-item">
+                        <h4><i class="fas fa-stethoscope"></i> Diagnosis Explanation</h4>
+                        <p id="diagnosisExplanation">-</p>
+                    </div>
+                    <div class="explanation-item">
+                        <h4><i class="fas fa-check-double"></i> Confidence Assessment</h4>
+                        <p id="confidenceAssessment">-</p>
+                    </div>
+                    <div class="explanation-item">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Uncertainty Analysis</h4>
+                        <p id="uncertaintyAssessment">-</p>
+                    </div>
+                    <div class="explanation-item">
+                        <h4><i class="fas fa-list-check"></i> Key Findings</h4>
+                        <ul id="keyFindingsList" style="list-style: none; padding: 0;">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-success btn-large" id="downloadReportBtn">
+                    <i class="fas fa-file-pdf"></i> Download Clinical Report
+                </button>
+                <button class="btn btn-secondary btn-large" id="analyzeAnotherBtn">
+                    <i class="fas fa-redo"></i> Analyze Another Scan
+                </button>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/visualization.js') }}"></script>
+{% endblock %}

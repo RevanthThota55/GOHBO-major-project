@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+ENV/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Model weights (download separately)
+*.pth
+*.pt
+*.ckpt
+*.onnx
+!models/.gitkeep
+!models/checkpoints/.gitkeep
+
+# Data
+data/*/
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Uploads
+webapp/uploads/*
+!webapp/uploads/.gitkeep
+
+# Logs & temp
+*.log
+*.tmp
+*.cache
+
+# Credentials
+.env
+.env.local
+.kaggle/
+kaggle.json
+
+# Large files
+*.zip
+*.tar.gz
+*.rar
+*.h5
+*.hdf5

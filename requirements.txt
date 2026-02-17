@@ -1,0 +1,42 @@
+# Core Dependencies
+torch>=2.0.0
+torchvision>=0.15.0
+tensorboard>=2.13.0
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+Pillow>=10.0.0
+tqdm>=4.65.0
+
+# Medical Image Processing
+opencv-python>=4.8.0
+scikit-image>=0.21.0
+albumentations>=1.3.0
+
+# Data Handling
+kaggle>=1.5.0  # For downloading public datasets
+gdown>=4.7.0  # For downloading from Google Drive
+requests>=2.31.0
+
+# Utilities
+pyyaml>=6.0.0
+python-dotenv>=1.0.0
+
+# Jupyter Notebook Support
+jupyter>=1.0.0
+ipywidgets>=8.0.0
+notebook>=7.0.0
+
+# Performance & Optimization
+numba>=0.57.0  # For speed optimization
+scipy>=1.11.0  # For optimization algorithms
+
+# Visualization
+plotly>=5.15.0
+
+# Explainability & Deployment (NEW FEATURES)
+onnx>=1.15.0  # ONNX model export for cross-platform deployment
+onnxruntime>=1.16.0  # ONNX Runtime for CPU inference
+# onnxruntime-gpu>=1.16.0  # Optional: Uncomment for GPU support

@@ -1,0 +1,100 @@
+{
+  "accuracy": 0.954233409610984,
+  "precision": 0.9548563349380593,
+  "recall": 0.954233409610984,
+  "f1_score": 0.95378787163968,
+  "roc_auc": 0.9923549894807783,
+  "confusion_matrix": [
+    [
+      295,
+      2,
+      3,
+      0
+    ],
+    [
+      10,
+      269,
+      16,
+      11
+    ],
+    [
+      3,
+      2,
+      399,
+      1
+    ],
+    [
+      8,
+      4,
+      0,
+      288
+    ]
+  ],
+  "per_class_metrics": {
+    "glioma_tumor": {
+      "precision": 0.9335443037974683,
+      "recall": 0.9833333333333333,
+      "f1_score": 0.9577922077922078,
+      "support": 300
+    },
+    "meningioma_tumor": {
+      "precision": 0.9711191335740073,
+      "recall": 0.8790849673202614,
+      "f1_score": 0.9228130360205832,
+      "support": 306
+    },
+    "no_tumor": {
+      "precision": 0.9545454545454546,
+      "recall": 0.9851851851851852,
+      "f1_score": 0.9696233292831106,
+      "support": 405
+    },
+    "pituitary_tumor": {
+      "precision": 0.96,
+      "recall": 0.96,
+      "f1_score": 0.96,
+      "support": 300
+    }
+  },
+  "classification_report": {
+    "glioma_tumor": {
+      "precision": 0.9335443037974683,
+      "recall": 0.9833333333333333,
+      "f1-score": 0.9577922077922078,
+      "support": 300.0
+    },
+    "meningioma_tumor": {
+      "precision": 0.9711191335740073,
+      "recall": 0.8790849673202614,
+      "f1-score": 0.9228130360205832,
+      "support": 306.0
+    },
+    "no_tumor": {
+      "precision": 0.9545454545454546,
+      "recall": 0.9851851851851852,
+      "f1-score": 0.9696233292831106,
+      "support": 405.0
+    },
+    "pituitary_tumor": {
+      "precision": 0.96,
+      "recall": 0.96,
+      "f1-score": 0.96,
+      "support": 300.0
+    },
+    "accuracy": 0.954233409610984,
+    "macro avg": {
+      "precision": 0.9548022229792326,
+      "recall": 0.951900871459695,
+      "f1-score": 0.9525571432739753,
+      "support": 1311.0
+    },
+    "weighted avg": {
+      "precision": 0.9548563349380593,
+      "recall": 0.954233409610984,
+      "f1-score": 0.95378787163968,
+      "support": 1311.0
+    }
+  },
+  "num_misclassified": 60,
+  "total_samples": 1311
+}
