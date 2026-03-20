@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}MedVision AI - Medical Image Classification{% endblock %}
+{% block title %}ExplainableMed-GOHBO - Medical Image Classification{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,10 +8,10 @@
     <section class="hero">
         <h1 class="hero-title">
             Medical Image Classification<br>
-            with <span class="highlight">Explainable AI</span>
+            with <span class="highlight">Explainable Analysis</span>
         </h1>
         <p class="hero-subtitle">
-            Upload a medical scan for instant AI-powered classification with visual explainability,
+            Upload a medical scan for instant algorithmically-powered classification with visual explainability,
             uncertainty quantification, and clinical-grade reporting.
         </p>
         <div class="hero-badges">
@@ -62,12 +62,18 @@
     <!-- Upload Section -->
     <section class="upload-section" id="uploadSection" style="display: none;">
         <div class="card upload-card">
-            <h2 id="uploadTitle"><i class="fas fa-cloud-upload-alt"></i> Upload Medical Scan</h2>
+            <div class="upload-card-header">
+                <div>
+                    <p class="upload-kicker">Scan Intake</p>
+                    <h2 id="uploadTitle"><i class="fas fa-cloud-upload-alt"></i> Upload Medical Scan</h2>
+                </div>
+                <span class="upload-status-pill" id="uploadStatusPill">Awaiting Scan</span>
+            </div>
             <p id="uploadSubtitle" class="viz-subtitle"></p>
 
             <!-- Drag & Drop Zone -->
             <div class="upload-zone" id="uploadZone">
-                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <input type="file" id="fileInput" accept="image/jpeg,image/png,image/tiff,.tif,.tiff" style="display: none;">
                 <div class="upload-content">
                     <i class="fas fa-cloud-upload-alt upload-icon" id="uploadIcon"></i>
                     <p class="upload-text" id="uploadText">Drag & drop your scan here</p>
@@ -78,22 +84,57 @@
 
             <!-- Image Preview -->
             <div class="image-preview" id="imagePreview" style="display: none;">
-                <h3>Selected Image:</h3>
-                <img id="previewImg" src="" alt="Scan Preview">
-                <button class="btn btn-secondary" id="changeImageBtn">
-                    <i class="fas fa-times"></i> Change Image
-                </button>
+                <div class="preview-header">
+                    <div>
+                        <p class="preview-kicker">Selected Scan</p>
+                        <h3 id="previewHeading">Ready for review</h3>
+                    </div>
+                    <div class="preview-badges">
+                        <span class="preview-badge" id="previewTypeBadge">-</span>
+                        <span class="preview-badge" id="previewSizeBadge">-</span>
+                    </div>
+                </div>
+                <div class="preview-stage" id="previewStage">
+                    <div class="preview-skeleton" id="previewSkeleton" style="display: none;">
+                        <div class="preview-skeleton-icon">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <p>Generating preview...</p>
+                    </div>
+                    <img id="previewImg" src="" alt="Scan Preview" style="display: none;">
+                    <div class="preview-fallback" id="previewFallback" style="display: none;">
+                        <i class="fas fa-file-medical-alt"></i>
+                        <h4>Preview Unavailable</h4>
+                        <p>The scan is ready for analysis, but this browser could not render a local preview.</p>
+                    </div>
+                </div>
+                <div class="preview-meta">
+                    <div class="preview-meta-primary">
+                        <p class="preview-meta-label">Selected file</p>
+                        <p class="preview-file-name" id="previewFileName">No file selected</p>
+                    </div>
+                    <p class="preview-file-details" id="previewFileDetails">
+                        Once loaded, the scan preview and file details will appear here.
+                    </p>
+                </div>
+                <div class="upload-actions">
+                    <button class="btn btn-secondary" id="changeImageBtn">
+                        <i class="fas fa-times"></i> Change Image
+                    </button>
+                    <button class="btn btn-primary btn-large" id="analyzeBtn" style="display: none;" disabled>
+                        <i class="fas fa-microscope"></i> Run System Analysis
+                    </button>
+                </div>
             </div>
 
-            <!-- Analyze Button -->
-            <button class="btn btn-primary btn-large" id="analyzeBtn" style="display: none; margin: 2rem auto; width: 100%; max-width: 400px;" disabled>
-                <i class="fas fa-microscope"></i> Analyze with AI
-            </button>
-
-            <!-- Back to model selection -->
-            <button class="btn btn-secondary" id="backToModelsBtn" style="margin: 1rem auto; display: block;">
-                <i class="fas fa-arrow-left"></i> Change Scan Type
-            </button>
+            <div class="upload-footer">
+                <button class="btn btn-secondary upload-back-btn" id="backToModelsBtn">
+                    <i class="fas fa-arrow-left"></i> Change Scan Type
+                </button>
+                <p class="upload-footer-note">
+                    TIFF scans are normalized into a web-safe preview before analysis. Clinical PDF reports are available after a successful run.
+                </p>
+            </div>
 
             <!-- Loading State -->
             <div class="loading" id="loadingState" style="display: none;">
@@ -116,7 +157,7 @@
 
             <!-- Diagnosis Card -->
             <div class="card result-card">
-                <h2><i class="fas fa-diagnoses"></i> AI Diagnosis</h2>
+                <h2><i class="fas fa-diagnoses"></i> System Diagnosis</h2>
                 <div class="diagnosis-result">
                     <div class="diagnosis-label" id="diagnosisLabel">-</div>
                     <div class="confidence-container">
@@ -136,9 +177,9 @@
 
             <!-- Visualization Card -->
             <div class="card visualization-card">
-                <h2><i class="fas fa-fire"></i> AI Visual Explainability</h2>
+                <h2><i class="fas fa-fire"></i> Visual Explainability</h2>
                 <p class="viz-subtitle">
-                    Grad-CAM heatmaps reveal which regions influenced the AI's decision
+                    Grad-CAM heatmaps reveal which regions influenced the diagnostic decision
                 </p>
 
                 <!-- Heatmap Callout Banner -->
@@ -149,7 +190,7 @@
                         <i class="fas fa-fire" style="animation: pulse 2s infinite;"></i>
                     </div>
                     <p>
-                        The colored overlay on the right shows <strong>exactly where the AI detected key diagnostic features</strong>.
+                        The colored overlay on the right shows <strong>exactly where the algorithm detected key diagnostic features</strong>.
                         Red/yellow areas indicate high-confidence detection regions.
                     </p>
                 </div>
@@ -163,7 +204,7 @@
                         <div class="heatmap-arrow">
                             <i class="fas fa-arrow-down"></i>
                         </div>
-                        <h4><i class="fas fa-crosshairs"></i> AI Attention Map (Grad-CAM)</h4>
+                        <h4><i class="fas fa-crosshairs"></i> System Attention Map (Grad-CAM)</h4>
                         <img id="heatmapImage" src="" alt="Grad-CAM Heatmap">
                         <div class="heatmap-legend">
                             <span class="legend-item">
@@ -185,11 +226,11 @@
                 <div class="description-box" style="margin-top: 2rem;">
                     <h4><i class="fas fa-lightbulb"></i> How to Read the Heatmap</h4>
                     <p>
-                        <strong>The colored overlay reveals the AI's decision-making process:</strong><br><br>
-                        <span style="color: #FF4444;">Red/Orange zones</span> = High importance regions where the AI detected key diagnostic patterns<br>
+                        <strong>The colored overlay reveals the system's decision-making process:</strong><br><br>
+                        <span style="color: #FF4444;">Red/Orange zones</span> = High importance regions where the algorithm detected key diagnostic patterns<br>
                         <span style="color: #FFDD44;">Yellow zones</span> = Medium importance areas contributing to the diagnosis<br>
                         <span style="color: #4488FF;">Blue zones</span> = Low importance regions with minimal influence<br><br>
-                        This Grad-CAM visualization makes the AI's reasoning transparent and verifiable by medical professionals.
+                        This Grad-CAM visualization makes the system's reasoning transparent and verifiable by medical professionals.
                     </p>
                 </div>
             </div>
@@ -203,7 +244,7 @@
 
             <!-- Explanation Card -->
             <div class="card explanation-card">
-                <h2><i class="fas fa-stethoscope"></i> AI Reasoning & Analysis</h2>
+                <h2><i class="fas fa-stethoscope"></i> System Reasoning & Analysis</h2>
                 <div class="explanation-content" id="explanationContent">
                     <div class="explanation-item">
                         <h4><i class="fas fa-stethoscope"></i> Diagnosis Explanation</h4>

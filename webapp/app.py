@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 import io
 import base64
+import tempfile
 from datetime import datetime
 import uuid
 import platform
@@ -47,12 +48,17 @@ from reports.report_generator import ClinicalReportGenerator
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
-app.config['UPLOAD_FOLDER'] = Path(__file__).parent / 'uploads'
+upload_dir = os.environ.get('EXPLAINABLEMED_UPLOAD_DIR')
+app.config['UPLOAD_FOLDER'] = (
+    Path(upload_dir)
+    if upload_dir
+    else Path(tempfile.gettempdir()) / 'explainablemed_uploads'
+)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'tif', 'tiff'}
 
 # Ensure upload folder exists
-app.config['UPLOAD_FOLDER'].mkdir(exist_ok=True)
+app.config['UPLOAD_FOLDER'].mkdir(parents=True, exist_ok=True)
 
 # Global model storage - keyed by model type
 MODELS = {}
@@ -170,6 +176,66 @@ MODEL_CONFIGS = {
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+
+def load_medical_image(filepath):
+    """Load an uploaded image safely, using OpenCV for TIFF decoding on Windows."""
+    if filepath.suffix.lower() in {'.tif', '.tiff'}:
+        image = cv2.imread(str(filepath), cv2.IMREAD_COLOR)
+        if image is None:
+            raise ValueError('Could not read TIFF image')
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(image)
+
+    with Image.open(filepath) as image:
+        return image.convert('RGB')
+
+
+@app.route('/preview_image', methods=['POST'])
+def preview_image():
+    """Generate a web-safe PNG preview for uploaded scans."""
+    filepath = None
+
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'error': 'Invalid file type. Use JPG, PNG, or TIFF'}), 400
+
+        filename = secure_filename(file.filename)
+        filepath = app.config['UPLOAD_FOLDER'] / f"preview_{uuid.uuid4()}_{filename}"
+        file.save(filepath)
+
+        image = load_medical_image(filepath)
+        width, height = image.size
+
+        preview_pil = image.copy()
+        preview_pil.thumbnail((960, 960))
+
+        return jsonify({
+            'success': True,
+            'preview': image_to_base64(np.array(preview_pil)),
+            'width': width,
+            'height': height,
+            'mode': preview_pil.mode
+        })
+
+    except Exception as e:
+        print(f"Error generating preview: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if filepath is not None and filepath.exists():
+            try:
+                filepath.unlink()
+            except OSError:
+                pass
 
 
 def load_single_model(model_type):
@@ -299,6 +365,8 @@ def index():
 @app.route('/predict', methods=['POST'])
 def predict():
     """Handle image upload and prediction"""
+    filepath = None
+
     try:
         # Check if file was uploaded
         if 'file' not in request.files:
@@ -330,7 +398,7 @@ def predict():
         file.save(filepath)
 
         # Load and preprocess image
-        image = Image.open(filepath).convert('RGB')
+        image = load_medical_image(filepath)
         original_np = np.array(image.resize((224, 224)))
         image_tensor = TRANSFORM(image).unsqueeze(0).to(DEVICE)
 
@@ -376,9 +444,6 @@ def predict():
         heatmap_base64 = image_to_base64(heatmap * 255)
         overlay_base64 = image_to_base64(overlay)
 
-        # Clean up uploaded file
-        filepath.unlink()
-
         # Prepare response
         response = {
             'success': True,
@@ -411,6 +476,12 @@ def predict():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if filepath is not None and filepath.exists():
+            try:
+                filepath.unlink()
+            except OSError:
+                pass
 
 
 def generate_explanation(model_type, predicted_class, confidence, uncertainty):
@@ -519,11 +590,14 @@ def internal_error(e):
 
 
 if __name__ == '__main__':
+    debug_mode = os.environ.get('FLASK_DEBUG', '').lower() in {'1', 'true', 'yes', 'on'}
+
     print("=" * 60)
     print("ExplainableMed-GOHBO Web Application")
     print("Multi-Model Medical Image Classification")
     print("=" * 60)
     print(f"Device: {DEVICE}")
+    print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
 
     # Load all models
     load_all_models()
@@ -536,5 +610,6 @@ if __name__ == '__main__':
     app.run(
         host='0.0.0.0',
         port=5000,
-        debug=True
+        debug=debug_mode,
+        use_reloader=False
     )

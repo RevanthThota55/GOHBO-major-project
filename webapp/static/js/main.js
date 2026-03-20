@@ -1,5 +1,5 @@
 /**
- * MedVision AI - Main JavaScript
+ * ExplainableMed-GOHBO - Main JavaScript
  * Handles model selection, file upload, prediction, and UI interactions
  */
 
@@ -7,6 +7,7 @@
 let selectedFile = null;
 let currentPredictionData = null;
 let selectedModelType = null;
+let previewObjectUrl = null;
 
 // Model display config
 const MODEL_UI = {
@@ -62,6 +63,14 @@ const loadingState = document.getElementById('loadingState');
 const resultsSection = document.getElementById('resultsSection');
 const uploadSection = document.getElementById('uploadSection');
 const modelSelector = document.getElementById('modelSelector');
+const uploadStatusPill = document.getElementById('uploadStatusPill');
+const previewSkeleton = document.getElementById('previewSkeleton');
+const previewFallback = document.getElementById('previewFallback');
+const previewFileName = document.getElementById('previewFileName');
+const previewFileDetails = document.getElementById('previewFileDetails');
+const previewTypeBadge = document.getElementById('previewTypeBadge');
+const previewSizeBadge = document.getElementById('previewSizeBadge');
+const previewHeading = document.getElementById('previewHeading');
 
 // Initialize event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -113,6 +122,8 @@ function selectModel(modelType) {
         uploadIcon.className = 'fas ' + ui.uploadIcon + ' upload-icon';
     }
     if (uploadText) uploadText.textContent = ui.uploadText;
+    if (previewHeading) previewHeading.textContent = ui.uploadTitle + ' ready';
+    setUploadStatus('Awaiting Scan', 'idle');
 
     // Show upload section with animation
     if (uploadSection) {
@@ -147,12 +158,17 @@ async function checkServerHealth() {
  * Show server connection warning
  */
 function showServerWarning() {
+    if (document.querySelector('.server-warning')) return;
+
     const warning = document.createElement('div');
     warning.className = 'server-warning';
     warning.innerHTML = `
-        <div style="background: rgba(245, 158, 11, 0.1); border: 2px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 16px; margin: 16px; text-align: center;">
-            <i class="fas fa-exclamation-triangle" style="color: #F59E0B; font-size: 1.5rem; margin-bottom: 8px;"></i>
-            <p style="color: #FFFFFF; margin: 0;">Cannot connect to server. Make sure the Flask application is running.</p>
+        <div class="server-warning-card">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>Server connection unavailable</strong>
+                <p>Make sure the Flask application is running before starting an analysis.</p>
+            </div>
         </div>
     `;
 
@@ -296,30 +312,51 @@ function handleFileSelect(event) {
 /**
  * Handle file upload and preview
  */
-function handleFile(file) {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/tiff'];
-    if (!allowedTypes.includes(file.type)) {
-        alert('Please upload a valid image file (JPG, PNG, or TIFF)');
+async function handleFile(file) {
+    if (!isAllowedImage(file)) {
+        showNotification('Please upload a valid JPG, PNG, or TIFF scan.', 'error');
         return;
     }
 
     const maxSize = 16 * 1024 * 1024;
     if (file.size > maxSize) {
-        alert('File too large. Maximum size is 16MB.');
+        showNotification('File too large. Maximum size is 16MB.', 'error');
         return;
     }
 
     selectedFile = file;
+    clearPreviewState();
+    populatePreviewMetadata(file);
+    setUploadStatus('Preparing Preview', 'processing');
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        previewImg.src = e.target.result;
-        uploadZone.style.display = 'none';
-        imagePreview.style.display = 'block';
-        analyzeBtn.style.display = 'inline-flex';
+    uploadZone.style.display = 'none';
+    imagePreview.style.display = 'block';
+    analyzeBtn.style.display = 'inline-flex';
+    analyzeBtn.disabled = true;
+    changeImageBtn.disabled = true;
+
+    showPreviewLoading();
+
+    try {
+        const preview = await buildPreviewSource(file);
+        if (file !== selectedFile) return;
+
+        renderPreview(preview);
+        changeImageBtn.disabled = false;
         analyzeBtn.disabled = false;
-    };
-    reader.readAsDataURL(file);
+        setUploadStatus('Ready For Analysis', 'ready');
+    } catch (error) {
+        console.error('Preview error:', error);
+        if (file !== selectedFile) return;
+
+        showPreviewFallback(
+            'The scan is uploaded and ready for analysis, but the local preview could not be generated.'
+        );
+        changeImageBtn.disabled = false;
+        analyzeBtn.disabled = false;
+        setUploadStatus('Preview Limited', 'warning');
+        showNotification('Preview could not be generated, but the scan can still be analyzed.', 'warning');
+    }
 }
 
 /**
@@ -331,6 +368,11 @@ function resetUpload() {
     if (uploadZone) uploadZone.style.display = 'block';
     if (imagePreview) imagePreview.style.display = 'none';
     if (analyzeBtn) analyzeBtn.style.display = 'none';
+    if (loadingState) loadingState.style.display = 'none';
+    const backBtn = document.getElementById('backToModelsBtn');
+    if (backBtn) backBtn.style.display = 'inline-flex';
+    clearPreviewState();
+    setUploadStatus('Awaiting Scan', 'idle');
 }
 
 /**
@@ -349,12 +391,12 @@ function resetAll() {
  */
 async function analyzeScan() {
     if (!selectedFile) {
-        alert('Please select an image first');
+        showNotification('Select a scan image before starting analysis.', 'warning');
         return;
     }
 
     if (!selectedModelType) {
-        alert('Please select a scan type first');
+        showNotification('Choose a scan type before starting analysis.', 'warning');
         return;
     }
 
@@ -366,6 +408,7 @@ async function analyzeScan() {
     const backBtn = document.getElementById('backToModelsBtn');
     if (backBtn) backBtn.style.display = 'none';
     loadingState.style.display = 'block';
+    setUploadStatus('Analyzing', 'processing');
 
     // Update loading text
     const loadingText = document.getElementById('loadingText');
@@ -411,11 +454,12 @@ async function analyzeScan() {
             errorMessage = error.message;
         }
 
-        alert(errorMessage);
         loadingState.style.display = 'none';
         imagePreview.style.display = 'block';
         analyzeBtn.style.display = 'inline-flex';
         if (backBtn) backBtn.style.display = 'block';
+        setUploadStatus('Ready For Analysis', 'ready');
+        showNotification(errorMessage, 'error');
     }
 }
 
@@ -425,6 +469,7 @@ async function analyzeScan() {
 function displayResults(data) {
     const modelType = data.model_type || selectedModelType;
     const ui = MODEL_UI[modelType] || MODEL_UI['brain_tumor'];
+    setUploadStatus('Analysis Complete', 'ready');
 
     // Show results section
     resultsSection.style.display = 'block';
@@ -507,9 +552,7 @@ function updateProbabilities(probabilities) {
         item.innerHTML = `
             <div class="probability-label">${className}</div>
             <div class="probability-bar-container">
-                <div class="probability-bar" style="width: ${probabilityPct}%">
-                    ${probabilityPct}%
-                </div>
+                <div class="probability-bar" style="width: ${probabilityPct}%"></div>
             </div>
             <div class="probability-value">${probabilityPct}%</div>
         `;
@@ -567,7 +610,7 @@ function updateOpacity(event) {
  */
 async function downloadReport() {
     if (!currentPredictionData) {
-        alert('No prediction data available');
+        showNotification('No prediction data available yet.', 'warning');
         return;
     }
 
@@ -601,7 +644,7 @@ async function downloadReport() {
 
     } catch (error) {
         console.error('Error downloading report:', error);
-        alert('Error generating report: ' + error.message);
+        showNotification('Error generating report: ' + error.message, 'error');
     }
 }
 
@@ -611,8 +654,14 @@ async function downloadReport() {
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
+    const icons = {
+        success: 'fa-circle-check',
+        error: 'fa-circle-xmark',
+        warning: 'fa-triangle-exclamation',
+        info: 'fa-circle-info'
+    };
     notification.innerHTML = `
-        <i class="fas fa-check-circle"></i>
+        <i class="fas ${icons[type] || icons.info}"></i>
         <span>${message}</span>
     `;
 
@@ -621,4 +670,153 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.remove();
     }, 3000);
+}
+
+function isAllowedImage(file) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/tiff'];
+    const extension = getFileExtension(file.name);
+    return allowedTypes.includes(file.type) || ['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(extension);
+}
+
+function getFileExtension(filename) {
+    return filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
+}
+
+function isTiffFile(file) {
+    return ['tif', 'tiff'].includes(getFileExtension(file.name)) || file.type === 'image/tiff';
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function setUploadStatus(label, state = 'idle') {
+    if (!uploadStatusPill) return;
+
+    uploadStatusPill.textContent = label;
+    uploadStatusPill.dataset.state = state;
+}
+
+function populatePreviewMetadata(file, dimensionsText = 'Preview is ready for inspection.') {
+    if (previewFileName) previewFileName.textContent = file.name;
+    if (previewFileDetails) previewFileDetails.textContent = dimensionsText;
+    if (previewTypeBadge) previewTypeBadge.textContent = getFileExtension(file.name).toUpperCase() || 'IMAGE';
+    if (previewSizeBadge) previewSizeBadge.textContent = formatFileSize(file.size);
+}
+
+function showPreviewLoading() {
+    if (previewSkeleton) previewSkeleton.style.display = 'flex';
+    if (previewImg) {
+        previewImg.style.display = 'none';
+        previewImg.removeAttribute('src');
+    }
+    if (previewFallback) previewFallback.style.display = 'none';
+}
+
+function showPreviewFallback(message) {
+    if (previewSkeleton) previewSkeleton.style.display = 'none';
+    if (previewImg) {
+        previewImg.style.display = 'none';
+        previewImg.removeAttribute('src');
+    }
+    if (previewFallback) {
+        const text = previewFallback.querySelector('p');
+        if (text) text.textContent = message;
+        previewFallback.style.display = 'flex';
+    }
+}
+
+function clearPreviewState() {
+    if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+        previewObjectUrl = null;
+    }
+
+    if (previewSkeleton) previewSkeleton.style.display = 'none';
+    if (previewFallback) previewFallback.style.display = 'none';
+    if (previewImg) {
+        previewImg.style.display = 'none';
+        previewImg.removeAttribute('src');
+    }
+    if (previewFileName) previewFileName.textContent = 'No file selected';
+    if (previewFileDetails) {
+        previewFileDetails.textContent = 'Once loaded, the scan preview and file details will appear here.';
+    }
+    if (previewTypeBadge) previewTypeBadge.textContent = '-';
+    if (previewSizeBadge) previewSizeBadge.textContent = '-';
+}
+
+async function buildPreviewSource(file) {
+    if (isTiffFile(file)) {
+        return requestServerPreview(file);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+
+    try {
+        const dimensions = await preloadImage(objectUrl);
+        return {
+            src: objectUrl,
+            objectUrl,
+            details: `${dimensions.width} × ${dimensions.height} px • Ready for analysis.`
+        };
+    } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+        return requestServerPreview(file);
+    }
+}
+
+function preloadImage(src) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+            resolve({
+                width: image.naturalWidth,
+                height: image.naturalHeight
+            });
+        };
+        image.onerror = reject;
+        image.src = src;
+    });
+}
+
+async function requestServerPreview(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/preview_image', {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        throw new Error(`Preview request failed with ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+        throw new Error(data.error || 'Preview generation failed');
+    }
+
+    return {
+        src: data.preview,
+        objectUrl: null,
+        details: `${data.width} × ${data.height} px • Server-rendered preview for reliable viewing.`
+    };
+}
+
+function renderPreview(preview) {
+    if (preview.objectUrl) {
+        previewObjectUrl = preview.objectUrl;
+    }
+
+    if (previewImg) {
+        previewImg.src = preview.src;
+        previewImg.style.display = 'block';
+    }
+    if (previewSkeleton) previewSkeleton.style.display = 'none';
+    if (previewFallback) previewFallback.style.display = 'none';
+    if (previewFileDetails) previewFileDetails.textContent = preview.details;
 }

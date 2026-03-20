@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MedVision AI - Multi-Model Medical Image Classification with Explainable AI">
-    <title>{% block title %}MedVision AI{% endblock %}</title>
+    <meta name="description" content="ExplainableMed-GOHBO - Multi-Model Medical Image Classification with Explainable Analysis">
+    <title>{% block title %}ExplainableMed-GOHBO{% endblock %}</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
                 <div class="brand-icon">
                     <i class="fas fa-heartbeat"></i>
                 </div>
-                <span class="brand-text">MedVision AI</span>
+                <span class="brand-text">ExplainableMed-GOHBO</span>
             </a>
             <div class="nav-links">
                 <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
@@ -36,7 +36,7 @@
                 <a href="{{ url_for('about') }}" class="nav-link {% if request.endpoint == 'about' %}active{% endif %}">
                     <i class="fas fa-info-circle"></i> About
                 </a>
-                <a href="https://github.com/" target="_blank" class="nav-link">
+                <a href="https://github.com/RevanthThota55/GOHBO-major-project" target="_blank" rel="noreferrer" class="nav-link">
                     <i class="fab fa-github"></i> GitHub
                 </a>
             </div>
@@ -53,9 +53,9 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h4>MedVision AI</h4>
+                    <h4>ExplainableMed-GOHBO</h4>
                     <p>
-                        Multi-model medical imaging AI powered by GOHBO-optimized ResNet-18
+                        Multi-model medical imaging algorithm powered by the GOHBO-optimized ResNet-18
                         with Grad-CAM explainability and Monte Carlo Dropout uncertainty quantification.
                     </p>
                     <p class="disclaimer">
@@ -83,7 +83,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 MedVision AI | Built with PyTorch, Flask & Advanced Machine Learning</p>
+                <p>&copy; 2025 ExplainableMed-GOHBO | Built with PyTorch, Flask & Advanced Machine Learning</p>
             </div>
         </div>
     </footer>
